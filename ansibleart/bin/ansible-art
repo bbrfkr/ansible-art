@@ -1,0 +1,564 @@
+#!/usr/bin/python
+#coding: utf-8
+
+### import module
+import sys
+import os
+import ConfigParser
+import yaml
+import shutil
+from jinja2 import Environment, FileSystemLoader
+import subprocess
+import ansibleart
+
+# preserve order with yaml file
+try:
+    from collections import OrderedDict
+except ImportError:
+    from odict import odict as OrderedDict
+
+def represent_odict(dumper, instance):
+     return dumper.represent_mapping(u'tag:yaml.org,2002:map', instance.items())
+
+yaml.add_representer(OrderedDict, represent_odict)
+
+def construct_odict(loader, node):
+    return OrderedDict(loader.construct_pairs(node))
+
+yaml.add_constructor(u'tag:yaml.org,2002:map', construct_odict)
+
+### constant
+ACCEPT_STATES = [0,10,20,31,33,35,37,52,54,56,
+                 58,60,62,64,66,68,70,72,74,76,
+                 78,80,82]
+ARBITORARY_INPUT_STATES = [32,36,50,51,53,55,
+                           57,59,61,63,65,66,
+                           67,69,71,73,75,77,79,81]
+VERSION = "0.1"
+CONFIG_PATH = os.environ['HOME'] + "/.ansible-art.cnf"
+WORK_DIR = ".ansible-art"
+CURRENT_DIR = os.getcwd()
+PLAYBOOK_FILE = "ansible-art_playbook.yml"
+
+### utility function
+
+# inner state
+# *00: 空
+# *10: help
+# *20: version
+#  30: role
+# *31: role list
+#  32: role params
+# *33: role params <role>
+#  34: role dir
+# *35: role dir show
+#  36: role dir set
+# *37: role dir set <dir>
+#  50: apply
+#  51: apply <role>
+# *52: apply <role> <inventory>
+#  53: apply <role> <inventory> [-p]
+# *54: apply <role> <inventory> [-p <dir>]
+#  55: apply <role> <inventory> [-g]
+# *56: apply <role> <inventory> [-g <dir>]
+#  57: apply <role> <inventory> [-t]
+# *58: apply <role> <inventory> [-t <dir>]
+#  59: apply <role> <inventory> [-p <dir>] [-g]
+# *60: apply <role> <inventory> [-p <dir>] [-g <dir>]
+#  61: apply <role> <inventory> [-p <dir>] [-t]
+# *62: apply <role> <inventory> [-p <dir>] [-t <dir>]
+#  63: apply <role> <inventory> [-g <dir>] [-p]
+# *64: apply <role> <inventory> [-g <dir>] [-p <dir>]
+#  65: apply <role> <inventory> [-g <dir>] [-t]
+# *66: apply <role> <inventory> [-g <dir>] [-t <dir>]
+#  67: apply <role> <inventory> [-t <dir>] [-p]
+# *68: apply <role> <inventory> [-t <dir>] [-p <dir>]
+#  69: apply <role> <inventory> [-t <dir>] [-g]
+# *70: apply <role> <inventory> [-t <dir>] [-g <dir>]
+#  71: apply <role> <inventory> [-p <dir>] [-g <dir>] [-t]
+# *72: apply <role> <inventory> [-p <dir>] [-g <dir>] [-t <dir>]
+#  73: apply <role> <inventory> [-p <dir>] [-t <dir>] [-g]
+# *74: apply <role> <inventory> [-p <dir>] [-t <dir>] [-g <dir>]
+#  75: apply <role> <inventory> [-g <dir>] [-p <dir>] [-t]
+# *76: apply <role> <inventory> [-g <dir>] [-p <dir>] [-t <dir>]
+#  77: apply <role> <inventory> [-g <dir>] [-t <dir>] [-p]
+# *78: apply <role> <inventory> [-g <dir>] [-t <dir>] [-p <dir>]
+#  79: apply <role> <inventory> [-t <dir>] [-p <dir>] [-g]
+# *80: apply <role> <inventory> [-t <dir>] [-p <dir>] [-g <dir>]
+#  81: apply <role> <inventory> [-t <dir>] [-g <dir>] [-p]
+# *82: apply <role> <inventory> [-t <dir>] [-g <dir>] [-p <dir>]
+# 99: ERROR
+
+# transision function
+def transision(arg,state):
+    if arg == "help":
+        if state == 0:
+            return 10
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "version":
+        if state == 0:
+            return 20
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "role":
+        if state == 0:
+            return 30
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "list":
+        if state == 30:
+            return 31
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "params":
+        if state == 30:
+            return 32
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "dir":
+        if state == 30:
+            return 34
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "show":
+        if state == 34:
+            return 35
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "set":
+        if state == 34:
+            return 36
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "apply":
+        if state == 0:
+            return 50
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "-p":
+        if state == 52:
+            return 53
+        elif state == 56:
+            return 63
+        elif state == 58:
+            return 67
+        elif state == 66:
+            return 77
+        elif state == 70:
+            return 81
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "-g":
+        if state == 52:
+            return 55
+        elif state == 54:
+            return 59
+        elif state == 58:
+            return 69
+        elif state == 62:
+            return 73
+        elif state == 68:
+            return 79
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    elif arg == "-t":
+        if state == 52:
+            return 57
+        elif state == 54:
+            return 61
+        elif state == 56:
+            return 65
+        elif state == 60:
+            return 71
+        elif state == 64:
+            return 75
+        elif state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+    else:
+        if state in ARBITORARY_INPUT_STATES:
+            return state + 1
+        else:
+            return 99
+
+# subparser
+def subparser(argv,state):
+    if argv == []:
+        if state in ACCEPT_STATES:
+            return [True, state]
+        else:
+            return [False, state]
+    else:
+        return subparser(argv[1:],transision(argv[0],state))
+
+def check_roles_dir():
+    return os.path.exists(CONFIG_PATH)
+
+def get_roles_dir():
+    if check_roles_dir():
+        config = ConfigParser.SafeConfigParser()
+        config.read(CONFIG_PATH)
+        if config.has_option("general", "ansible_roles_dir"):
+            return config.get("general", "ansible_roles_dir")
+        else:
+            print "ERROR: " + CONFIG_PATH + " don't have option \"ansible_roles_dir\""
+            sys.exit(1)
+    else:
+        print "ERROR: " + CONFIG_PATH + " is not found"
+        sys.exit(1)
+
+def search_role(role):
+    roles_dir= get_roles_dir()
+    roles = os.listdir(roles_dir)
+    if role in roles:
+        return True
+    else:
+        return False
+
+### parser
+def parser(argv):
+    return subparser(argv[1:],0)
+
+### exec command
+def print_help():
+    print "*** usage ***"
+    print "ansible-art [help]"
+    print "ansible-art version"
+    print "ansible-art role list"
+    print "ansible-art role params <role>"
+    print "ansible-art role dir show"
+    print "ansible-art role dir set <dir>"
+    print "ansible-art apply <role> <inventory> [-t <target>] [-p <dir>] [-g <dir>]"
+    print ""
+
+def print_version():
+    print VERSION
+ 
+def print_role_list():
+    roles_dir= get_roles_dir()
+    roles = os.listdir(roles_dir)
+    for role in roles:
+        if os.path.isdir(roles_dir + "/" + role) and \
+           os.path.exists(roles_dir + "/" + role + "/tasks/main.yml"):
+            print role
+
+def print_role_params(role):
+    roles_dir = get_roles_dir()
+    if os.path.exists(roles_dir + "/" + role):
+        if os.path.exists(roles_dir + "/" + role + "/defaults/main.yml"):
+            defaults = open(roles_dir + "/" + role + "/defaults/main.yml",'r')
+            defaults_yaml = yaml.load(defaults)
+            print "---"
+            print yaml.dump(defaults_yaml, default_flow_style=False)
+            defaults.close()
+        else:
+            print ""
+    else:
+        print "ERROR: role \"" + role + "\" doesn't exist in ansible roles dir"
+
+def print_role_dir():
+    print get_roles_dir()
+
+def set_role_dir(directory):
+    config = ConfigParser.SafeConfigParser()
+    if os.path.exists(CONFIG_PATH):
+        config.read(CONFIG_PATH)
+        if not config.has_section("general"):
+            config.add_section('general')
+        config.set("general", "ansible_roles_dir", directory)
+    else:
+        config.add_section('general')
+        config.set("general", "ansible_roles_dir", directory)
+    conf_file = open(CONFIG_PATH, "w")
+    config.write(conf_file)
+    conf_file.close()
+
+def search_role_inventory(role, inventory):
+    # search role
+    if not search_role(role):
+        print "ERROR: role \"" + role + "\" is not found"
+        sys.exit(1)
+
+    # search inventory
+    if not os.path.exists(CURRENT_DIR + "/" + inventory):
+        print "ERROR: inventory \"" + CURRENT_DIR + "/" + inventory + "\" is not found"
+        sys.exit(1)    
+
+def copy_vars(params, group_params):
+    if params != "":
+        shutil.copytree(CURRENT_DIR + "/" + params, CURRENT_DIR + "/" + WORK_DIR + "/host_vars")
+    if group_params != "":
+        shutil.copytree(CURRENT_DIR + "/" + group_params, CURRENT_DIR + "/" + WORK_DIR  +"/group_vars")
+
+def exec_playbook(role,inventory,params,group_params,target):
+    # search WORK_DIR
+    if os.path.exists(CURRENT_DIR + "/" + WORK_DIR):
+        print "ERROR: " + CURRENT_DIR + "/" + WORK_DIR + " already exists"
+        sys.exit(1)
+
+    # create WORK_DIR
+    os.mkdir(CURRENT_DIR + "/" + WORK_DIR)
+    try:
+        # create ansible.cfg
+        data_path = os.path.dirname(sys.modules["ansibleart"].__file__)
+        env = Environment(loader=FileSystemLoader(data_path + "/data", encoding='utf8'))
+        template = env.get_template("ansible.cfg.j2")
+        ansible_roles_dir = get_roles_dir()
+        ansible_config = template.render({'ansible_roles_dir': ansible_roles_dir})
+        ansible_config_file = open(CURRENT_DIR + "/" + WORK_DIR + "/ansible.cfg","w")
+        ansible_config_file.write(ansible_config.encode("utf-8"))
+        ansible_config_file.close()
+
+        # copy inventory
+        shutil.copy(CURRENT_DIR + "/" + inventory, CURRENT_DIR + "/" + WORK_DIR + "/" + inventory)
+
+        # copy <host_vars>
+        # copy <group_vars>
+        copy_vars(params, group_params)
+
+        # create playbook
+        env = Environment(loader=FileSystemLoader(data_path + "/data", encoding='utf8'))
+        template = env.get_template("ansible-art_playbook.yml.j2")
+        ansible_playbook = template.render({'role': role, 'target': target})
+        ansible_playbook_file = open(CURRENT_DIR + "/" + WORK_DIR + "/" + PLAYBOOK_FILE,"w")
+        ansible_playbook_file.write(ansible_playbook.encode("utf-8"))
+        ansible_playbook_file.close()
+
+        # exec playbook
+        subprocess.Popen(["ansible-playbook", "-i", inventory, PLAYBOOK_FILE],
+                          cwd=(CURRENT_DIR + "/" + WORK_DIR)).wait()
+    except Exception as e:
+        print "ERROR: " + str(type(e))  + " " + e.message
+        sys.exit(1)
+    finally:
+        # remove WORK_DIR in current dir
+        shutil.rmtree(CURRENT_DIR + "/" + WORK_DIR)
+
+def apply_role_pgt(role,inventory,params,group_params,target):
+    search_role_inventory(role,inventory)
+
+    # search host_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + params):
+        print "ERROR: params dir \"" + CURRENT_DIR + "/" + params + "\" is not found"
+        sys.exit(1)
+    # search group_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + group_params):
+        print "ERROR: group params dir \"" + CURRENT_DIR + "/" + group_params + "\" is not found"
+        sys.exit(1)
+
+    exec_playbook(role,inventory,params,group_params,target)
+
+def apply_role(role,inventory):
+    search_role_inventory(role,inventory)
+
+    params = ""
+    group_params = ""
+
+    # search host_vars
+    if os.path.isdir(CURRENT_DIR + "/host_vars"):
+         params = "host_vars"
+
+    # search group_vars
+    if os.path.isdir(CURRENT_DIR + "/group_vars"):
+         group_params = "group_vars"
+
+    exec_playbook(role,inventory,params,group_params,role)
+
+def apply_role_p(role,inventory,params):
+    search_role_inventory(role,inventory)
+
+    group_params = ""
+
+    # search host_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + params):
+        print "ERROR: params dir \"" + CURRENT_DIR + "/" + params + "\" is not found"
+        sys.exit(1)
+    # search group_vars
+    if os.path.isdir(CURRENT_DIR + "/group_vars"):
+         group_params = "group_vars"
+
+    exec_playbook(role,inventory,params,group_params,role)
+
+def apply_role_g(role,inventory,group_params):
+    search_role_inventory(role,inventory)
+
+    params = ""
+
+    # search host_vars
+    if os.path.isdir(CURRENT_DIR + "/host_vars"):
+         params = "host_vars"
+
+    # search group_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + group_params):
+        print "ERROR: group params dir \"" + CURRENT_DIR + "/" + group_params + "\" is not found"
+        sys.exit(1)
+
+    exec_playbook(role,inventory,params,group_params,role)
+
+def apply_role_t(role,inventory,target):
+    search_role_inventory(role,inventory)
+
+    params = ""
+    group_params = ""
+
+    # search host_vars
+    if os.path.isdir(CURRENT_DIR + "/host_vars"):
+         params = "host_vars"
+
+    # search group_vars
+    if os.path.isdir(CURRENT_DIR + "/group_vars"):
+         group_params = "group_vars"
+
+    exec_playbook(role,inventory,params,group_params,target)
+
+def apply_role_pg(role,inventory,params,group_params):
+    search_role_inventory(role,inventory)
+
+    # search host_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + params):
+        print "ERROR: params dir \"" + CURRENT_DIR + "/" + params + "\" is not found"
+        sys.exit(1)
+    # search group_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + group_params):
+        print "ERROR: group params dir \"" + CURRENT_DIR + "/" + group_params + "\" is not found"
+        sys.exit(1)
+
+    exec_playbook(role,inventory,params,group_params,role)
+
+def apply_role_pt(role,inventory,params,target):
+    search_role_inventory(role,inventory)
+
+    group_params = ""
+
+    # search host_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + params):
+        print "ERROR: params dir \"" + CURRENT_DIR + "/" + params + "\" is not found"
+        sys.exit(1)
+    # search group_vars
+    if os.path.isdir(CURRENT_DIR + "/group_vars"):
+         group_params = "group_vars"
+
+    exec_playbook(role,inventory,params,group_params,target)
+
+def apply_role_gt(role,inventory,group_params,target):
+    search_role_inventory(role,inventory)
+
+    params = ""
+
+    # search host_vars
+    if os.path.isdir(CURRENT_DIR + "/host_vars"):
+         params = "host_vars"
+
+    # search group_vars
+    if not os.path.isdir(CURRENT_DIR + "/" + group_params):
+        print "ERROR: group params dir \"" + CURRENT_DIR + "/" + group_params + "\" is not found"
+        sys.exit(1)
+
+    exec_playbook(role,inventory,params,group_params,target)
+
+### main
+argv = sys.argv
+parse_result = parser(argv)
+
+if parse_result[0]:
+    if parse_result[1] in [0, 10]:
+        print_help()
+
+    elif parse_result[1] == 20:
+        print_version()
+
+    elif parse_result[1] == 31:
+        print_role_list()
+
+    elif parse_result[1] == 33:
+        print_role_params(argv[3])
+
+    elif parse_result[1] == 35:
+        print_role_dir()
+
+    elif parse_result[1] == 37:
+        set_role_dir(argv[4])
+
+    elif parse_result[1] == 52:
+        apply_role(argv[2],argv[3])
+
+    elif parse_result[1] == 54:
+        apply_role_p(argv[2],argv[3],argv[5])
+
+    elif parse_result[1] == 56:
+        apply_role_g(argv[2],argv[3],argv[5])
+
+    elif parse_result[1] == 58:
+        apply_role_t(argv[2],argv[3],argv[5])
+
+    elif parse_result[1] == 60:
+        apply_role_pg(argv[2],argv[3],argv[5],argv[7])
+
+    elif parse_result[1] == 62:
+        apply_role_pt(argv[2],argv[3],argv[5],argv[7])
+
+    elif parse_result[1] == 64:
+        apply_role_pg(argv[2],argv[3],argv[7],argv[5])
+
+    elif parse_result[1] == 66:
+        apply_role_gt(argv[2],argv[3],argv[5],argv[7])
+
+    elif parse_result[1] == 68:
+        apply_role_pt(argv[2],argv[3],argv[7],argv[5])
+
+    elif parse_result[1] == 70:
+        apply_role_gt(argv[2],argv[3],argv[7],argv[5])
+
+    elif parse_result[1] == 72:
+        apply_role_pgt(argv[2],argv[3],argv[5],argv[7],argv[9])
+
+    elif parse_result[1] == 74:
+        apply_role_pgt(argv[2],argv[3],argv[5],argv[9],argv[7])
+
+    elif parse_result[1] == 76:
+        apply_role_pgt(argv[2],argv[3],argv[7],argv[5],argv[9])
+
+    elif parse_result[1] == 78:
+        apply_role_pgt(argv[2],argv[3],argv[9],argv[5],argv[7])
+
+    elif parse_result[1] == 80:
+        apply_role_pgt(argv[2],argv[3],argv[7],argv[9],argv[5])
+
+    elif parse_result[1] == 82:
+        apply_role_pgt(argv[2],argv[3],argv[9],argv[7],argv[5])
+
+    else:
+        print "ERROR: inner error"
+        print ""
+        sys.exit(1)
+
+else:
+    print "ERROR: invalid command"
+    print ""
+    print_help()
+    sys.exit(1)
+

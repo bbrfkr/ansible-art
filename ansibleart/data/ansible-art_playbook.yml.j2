@@ -1,0 +1,6 @@
+---
+- name: exec role *** {{ role }} ***
+  hosts: {{ target | default(role) }}
+  roles:
+    - {{ role }}
+
