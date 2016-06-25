@@ -87,7 +87,7 @@ PLAYBOOK_FILE = "ansible-art_playbook.yml"
 # *80: apply <role> <inventory> [-t <dir>] [-p <dir>] [-g <dir>]
 #  81: apply <role> <inventory> [-t <dir>] [-g <dir>] [-p]
 # *82: apply <role> <inventory> [-t <dir>] [-g <dir>] [-p <dir>]
-# 99: ERROR
+#  99: ERROR
 
 # transision function
 def transision(arg,state):
