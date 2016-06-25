@@ -1,4 +1,9 @@
 # ansible-art
+ansible apply role tool: ansible-art is a simple tool to apply role of ansible.
+
+## abstract
+To apply role of ansible, we need to write playbook for each role in conventional. By using ansible-art, we can apply role to machines without writing playbook by oneself. ansible-art creates playbook instead of us.
+
 ## install
 ```
 pip install ansible-art
