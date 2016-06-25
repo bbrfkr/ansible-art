@@ -13,7 +13,7 @@ def main():
         version='0.1',
         author='Tatsunori Saito',
         author_email='bbrfkr@gmail.com',
-        url='http://tracks.bbrfkr.mydns.jp',
+        url='https://github.com/bbrfkr/ansible-art',
         description=description,
         long_description=description,
         zip_safe=False,
