@@ -29,7 +29,7 @@ def construct_odict(loader, node):
 yaml.add_constructor(u'tag:yaml.org,2002:map', construct_odict)
 
 ### constant
-VERSION = "0.1"
+VERSION = "0.2"
 CONFIG_PATH = os.environ['HOME'] + "/.ansible-art.cnf"
 WORK_DIR = ".ansible-art"
 CURRENT_DIR = os.getcwd()
