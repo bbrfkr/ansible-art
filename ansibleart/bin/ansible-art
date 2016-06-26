@@ -124,8 +124,8 @@ def exec_playbook(role,inventory,params,group_params,target,verbose):
         ansible_playbook_file.close()
 
         # exec playbook
-        subprocess.Popen(["ansible-playbook", "-i", inventory, PLAYBOOK_FILE, verbose_opt],
-                          cwd=(CURRENT_DIR + "/" + WORK_DIR)).wait()
+        cmd = "ansible-playbook" + " -i " + inventory + " " + PLAYBOOK_FILE + " " + verbose_opt
+        subprocess.Popen([ cmd ],cwd=(CURRENT_DIR + "/" + WORK_DIR), shell=True).wait()
     except Exception as e:
         print "ERROR: " + str(type(e))  + " " + e.message
         sys.exit(1)
