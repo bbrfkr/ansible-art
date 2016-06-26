@@ -314,11 +314,12 @@ help_role_dir_show = 'show the dir path set in advance by using command "ansible
 help_role_dir_set  = 'set the dir of roles used by other subcommands of ansible-art'
 help_role_dir_set_dir  = 'the dir of roles used by ansible-art'
 help_apply = 'apply role to machines'
-help_apply_role = 'apply role to machines'
-help_apply_inventory = 'apply role to machines'
-help_apply_target = 'apply role to machines'
-help_apply_params = 'apply role to machines'
-help_apply_group_params = 'apply role to machines'
+help_apply_role = 'the role wanted to apply'
+help_apply_inventory = 'an inventory file path'
+help_apply_target = 'specify hostname, ip, or group name in inventory file corresponding to target host or group'
+help_apply_params = 'specify the directory including host_vars files. if this parameter is not specified, ansible-art search "host_vars" dir as the directory including host_vars files. If "host_vars" dir is not found, no host_vars files are used'
+help_apply_group_params = 'specify the directory including group_vars files. if this parameter is not specified, ansible-art search "group_vars" dir as the directory including group_vars files. If "group_vars" dir is not found, no group_vars files are used'
+help_apply_verbose = 'verbose output option. if this option is specified, ansible-art deliver this option to ansible-playbook command. the more there is character "v", we can get more detailed output. for example, the output of "-vvvv" option is more detailed than the one of "-v"'
 
 # body of parser
 parser = argparse.ArgumentParser(description=help_root)
@@ -332,7 +333,7 @@ parser_apply.add_argument('INVENTORY',help=help_apply_inventory)
 parser_apply.add_argument('-t', '--target', metavar='TARGET',help=help_apply_target)
 parser_apply.add_argument('-p', '--params', metavar='DIR',help=help_apply_params)
 parser_apply.add_argument('-g', '--group-params', metavar='DIR',help=help_apply_group_params)
-parser_apply.add_argument('-v', '--verbose',action='count',help=help_apply_group_params)
+parser_apply.add_argument('-v', '--verbose',action='count',help=help_apply_verbose)
 
 subparsers_role = parser_role.add_subparsers(title='subcommands',description='valid subcommands', dest='role')
 parser_role_list = subparsers_role.add_parser('list',description=help_role_list, help=help_role_list)
