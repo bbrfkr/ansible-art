@@ -9,7 +9,7 @@ To apply role of ansible, we need to write playbook for each role in conventiona
 ```
 pip install ansible-art
 ```
-2. Second, set the directory of roles installed in advance. Please specify the directory of roles installed in advance to `DIR`.
+1. Second, set the directory of roles installed in advance. Please specify the directory of roles installed in advance to `DIR`.
 ```
 ansible-art role dir set DIR
 ```
