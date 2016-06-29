@@ -9,47 +9,46 @@ First, install ansible-art with `pip` command.
 ```
 pip install ansible-art
 ```
-Second, set the directory of roles installed in advance. Please specify the directory of roles installed in advance to `DIR`.
+Second, edit config file to set the dir of roles installed in advance.
 ```
-ansible-art role dir set DIR
+ansible-art config
 ```
+before
+```
+roles_path = /etc/ansible/roles
+```
+after
+```
+roles_path = <DIR>
+```
+please specify the dir of roles as `<DIR>`
 
 ## usage
 ```
 *** usage ***
-ansible-art [help]
-ansible-art version
+ansible-art [-h] [-V]
 ansible-art role list
 ansible-art role params <role>
-ansible-art role dir show
-ansible-art role dir set <dir>
-ansible-art apply <role> <inventory> [-t <target>] [-p <dir>] [-g <dir>] [-v]
+ansible-art config
+ansible-art apply <role> <inventory> [-p <dir>] [-g <dir>] [-a <args>]
 ```
 
-- `ansible-art [help]`
+- `ansible-art [-h]`
 
- Show help message and exit.
-
-- `ansible-art version`
-
- Show version and exit.
+ Using option `[-h]`, show help message and exit. Using option `[-V]`, show version and exit.
 
 - `ansbile-art role list`
 
- Show roles in the dir set in advance by using command `ansible-art dir set <dir>`.
+ Show roles in the dir specified in config file.
 
 - `ansible-art role params <role>`
 
  Show parameters defined in defaults/main.yml of specified role.
 
-- `ansible-art role dir show`
+- `ansible-art config`
 
- Show the dir in advance by using command `ansible-art dir set <dir>` ".
+ Edit config file.
 
-- `ansible-art role dir set <dir>`
+- `ansible-art apply <role> <inventory> [-p <dir>] [-g <dir>] [-a <args>]`
 
- Set dir to use other subcommands of `ansible-art`.
-
-- `ansible-art apply <role> <inventory> [-t <target>] [-p <dir>] [-g <dir>] [-v]`
-
- Apply role target machine. In `<role>`, specify role wanted to apply. In `<inventory>`, specify inventory file path to use. In `<target>`, specify target host or group in inventory file. If `<target>` is not specified, `<role>` is used for target group. In `<dir>`, specify the directory including host_vars files or group_vars files. If `<dir>` is not specified, `host_vars` dir or `group_vars` dir searched as host_vars dir or group_vars dir. If `host_vars` dir or `group_vars` dir is not exist, no host_vars files or group_vars files are used. `-v` opton is specified, ansible-art deliver this option to ansible-playbook command. The more there is character `v`, we can get more detailed output. For example, the output of `-vvvv` option is more detailed than the one of `-v`
+ Apply role to machines. In `<role>`, specify role wanted to apply. In `<inventory>`, specify inventory file path to use. In `<dir>`, specify the directory including host_vars files or group_vars files. If `<dir>` is not specified, `host_vars` dir or `group_vars` dir searched as host_vars dir or group_vars dir. If `host_vars` dir or `group_vars` dir is not exist, no host_vars files or group_vars files are used. In `<args>`, we can specify some arguments of the command "ansible-playbook". Since ansible-art apply role to "all" group by default, if necessary, specify target group, ip or hostname by using `-l` option of the command "ansible-playbook".
