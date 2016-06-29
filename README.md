@@ -13,15 +13,11 @@ Second, edit config file to set the dir of roles installed in advance.
 ```
 ansible-art config
 ```
-before
-```
-roles_path = /etc/ansible/roles
-```
-after
+The place which we need to change;
 ```
 roles_path = <DIR>
 ```
-please specify the dir of roles as `<DIR>`
+Please specify the dir of roles as `<DIR>`.
 
 ## usage
 ```
@@ -33,7 +29,7 @@ ansible-art config
 ansible-art apply <role> <inventory> [-p <dir>] [-g <dir>] [-a <args>]
 ```
 
-- `ansible-art [-h]`
+- `ansible-art [-h] [-V]`
 
  Using option `[-h]`, show help message and exit. Using option `[-V]`, show version and exit.
 
