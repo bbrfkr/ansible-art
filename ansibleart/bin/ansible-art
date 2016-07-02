@@ -260,6 +260,11 @@ parser_role_params.add_argument('ROLE', help=HELP_ROLE_PARAMS_ROLE)
 if not check_config():
     create_config()
 
+for i in range(0,len(sys.argv)-1):
+  if sys.argv[i] == "-a":
+    if i != len(sys.argv) - 1:
+      sys.argv[i+1] = sys.argv[i+1] + " "
+
 args = parser.parse_args()
 
 if args.root == "role":
