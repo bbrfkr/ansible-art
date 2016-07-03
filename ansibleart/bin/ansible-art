@@ -13,7 +13,7 @@ import re
 import ansibleart
 
 ### constant
-VERSION = "0.3"
+VERSION = "0.3.1"
 HOME_DIR = os.environ['HOME']
 CONFIG_PATH = HOME_DIR + "/.ansible-art.cfg"
 WORK_DIR = HOME_DIR + "/.ansible-art"

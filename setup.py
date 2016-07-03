@@ -10,7 +10,7 @@ def main():
 
     setup(
         name='ansible-art',
-        version='0.3',
+        version='0.3.1',
         author='Tatsunori Saito',
         author_email='bbrfkr@gmail.com',
         url='https://github.com/bbrfkr/ansible-art',
