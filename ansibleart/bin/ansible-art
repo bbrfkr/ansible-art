@@ -257,8 +257,17 @@ parser_role_params = subparsers_role.add_parser('params',description=HELP_ROLE_P
 parser_role_params.add_argument('ROLE', help=HELP_ROLE_PARAMS_ROLE)
 
 ### main
+# check and create config file 
 if not check_config():
     create_config()
+
+# add space to -a option argument,
+# this procedure is to prevent that arguments parser interpretate
+# -a option argument is for ansible-art command, not ansible-playbook one.
+for i in range(0,len(sys.argv)-1):
+  if sys.argv[i] == "-a":
+    if i != len(sys.argv) - 1:
+      sys.argv[i+1] = sys.argv[i+1] + " "
 
 args = parser.parse_args()
 
