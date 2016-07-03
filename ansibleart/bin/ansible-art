@@ -6,28 +6,11 @@ import sys
 import os
 import argparse
 import ConfigParser
-import yaml
 import shutil
 from jinja2 import Environment, FileSystemLoader
 import subprocess
 import re
 import ansibleart
-
-### preserve order with yaml file
-try:
-    from collections import OrderedDict
-except ImportError:
-    from odict import odict as OrderedDict
-
-def represent_odict(dumper, instance):
-     return dumper.represent_mapping(u'tag:yaml.org,2002:map', instance.items())
-
-yaml.add_representer(OrderedDict, represent_odict)
-
-def construct_odict(loader, node):
-    return OrderedDict(loader.construct_pairs(node))
-
-yaml.add_constructor(u'tag:yaml.org,2002:map', construct_odict)
 
 ### constant
 VERSION = "0.3"
@@ -169,9 +152,7 @@ def print_role_params(role):
         roles_dir = get_roles_dir()
         if check_role_params(role, roles_dir):
             defaults = open(roles_dir + "/" + role + "/defaults/main.yml",'r')
-            defaults_yaml = yaml.load(defaults)
-            print "---"
-            print yaml.dump(defaults_yaml, default_flow_style=False)
+            print defaults.read()
             defaults.close()
     else:
         print "ERROR: role \"" + role + "\" is not found"  
