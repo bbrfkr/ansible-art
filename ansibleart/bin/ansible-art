@@ -13,12 +13,13 @@ import re
 import ansibleart
 
 ### constant
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 HOME_DIR = os.environ['HOME']
 CONFIG_PATH = HOME_DIR + "/.ansible-art.cfg"
 WORK_DIR = HOME_DIR + "/.ansible-art"
 CURRENT_DIR = os.getcwd()
 PLAYBOOK_FILE = "ansible-art_playbook.yml"
+INVENTORY_FILE = "hosts"
 
 # help message
 HELP_ROOT = 'A simple tool to apply role of ansible'
@@ -199,15 +200,14 @@ def apply_role(role, inventory, params, group_params, args):
         shutil.copy(CONFIG_PATH, WORK_DIR + "/ansible.cfg")
         if check_role_exist(role):
             if os.path.isfile(inventory):
-                shutil.copy(inventory, WORK_DIR)
+                shutil.copy(inventory, WORK_DIR + "/" + INVENTORY_FILE)
                 copy_params(params)
                 copy_group_params(group_params)
                 create_playbook(role)
-                inventory = os.path.basename(inventory)
                 if args is None:
-                    cmd = "ansible-playbook" + " -i " + inventory + " " + PLAYBOOK_FILE
+                    cmd = "ansible-playbook" + " -i " + INVENTORY_FILE + " " + PLAYBOOK_FILE
                 else:
-                    cmd = "ansible-playbook" + " -i " + inventory + " " + PLAYBOOK_FILE + " " + args
+                    cmd = "ansible-playbook" + " -i " + INVENTORY_FILE + " " + PLAYBOOK_FILE + " " + args
                 subprocess.Popen([ cmd ],cwd=(WORK_DIR), shell=True).wait()
             else:
                 print "ERROR: inventory \"" + inventory + "\" is not found"
